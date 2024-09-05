@@ -55,18 +55,36 @@ be given the container.
 version: "3"
 services:
   portfolio-performance:
-    image: quallenbezwinger/portfolio-performance:0.7
+    image: nimra98/portfolio-performance:latest
     container_name: portfolio
     restart: unless-stopped
-    ports:
-      - 5800:5800
+    #ports: # this is not needed when using traefik
+    #  - 5800:5800
     volumes:
-      - /opt/docker-volumes/pp/config:/config
-      - /opt/docker-volumes/pp/workspace:/opt/portfolio/workspace
+      - /opt/docker-volumes/pp/config:/config # Change this to your desired configuration path
+      - /opt/docker-volumes/pp/workspace:/opt/portfolio/workspace # Change this to your desired workspace path
     environment:
       USER_ID: 1000
       GROUP_ID: 1000
       DISPLAY_WIDTH: 1920
       DISPLAY_HEIGHT: 1080
       TZ: "Europe/Berlin" 
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web-proxy"
+      - "traefik.http.routers.portfolio-performance-domain.rule=Host(`portfolio.domain.tld`)"
+      - "traefik.http.routers.portfolio-performance-domain.middlewares=sec, sec@file, gzip@file"
+      - "traefik.http.routers.portfolio-performance-domain.tls.options=intermediate@file"
+      - "traefik.http.routers.portfolio-performance-domain.tls.certresolver=httpchallenge"
+      # Declaring the user list
+      #
+      # Note: when used in docker-compose.yml all dollar signs in the hash need to be doubled for escaping.
+      # To create user:password pair, it's possible to use this command:
+      # echo $(htpasswd -nB user) | sed -e s/\\$/\\$\\$/g
+      #
+      # Also note that dollar signs should NOT be doubled when they not evaluated (e.g. Ansible docker_container module).
+      - "traefik.http.middlewares.sec.basicauth.users=user:xxxxxxxxxxxxxxxxxxxxxx" # Replace with your own user:password hash
+      - "traefik.http.services.portfolio.loadbalancer.server.port=5800" # 
+
+```
 
